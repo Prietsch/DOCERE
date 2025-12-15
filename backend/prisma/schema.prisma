@@ -1,0 +1,247 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("RENDER_URL")
+}
+
+model Professor {
+  id               Int               @id @default(autoincrement())
+  nome             String
+  email            String            @unique
+  senha            String
+  cursos           Curso[]
+  redacoes         Redacao[]
+  redacaoCorrecoes RedacaoCorrecao[]
+  tiposComentario  TipoComentario[]
+  chats            Chat[]            @relation("ProfessorChats")
+}
+
+model Aluno {
+  id                    Int                     @id @default(autoincrement())
+  nome                  String
+  email                 String                  @unique
+  senha                 String
+  mediasNota            MediaNota[]
+  notasBimestre         NotaBimestre[]
+  PontuacaoQuestionario PontuacaoQuestionario[]
+  progress              Progress[]
+  redacaoRespostas      RedacaoResposta[]
+  RespostaQuestionario  RespostaQuestionario[]
+  chats                 Chat[]                  @relation("AlunoChats")
+  cursos                Curso[]                 @relation("AlunoToCurso")
+}
+
+model Curso {
+  id            Int            @id @default(autoincrement())
+  nome          String
+  descricao     String
+  professorId   Int
+  active        Boolean        @default(true)
+  chats         Chat[]
+  professor     Professor      @relation(fields: [professorId], references: [id])
+  MediaNota     MediaNota[]
+  modulos       Modulo[]
+  notasBimestre NotaBimestre[]
+  progress      Progress[]
+  redacoes      Redacao[]
+  alunos        Aluno[]        @relation("AlunoToCurso")
+}
+
+model Modulo {
+  id      Int    @id @default(autoincrement())
+  nome    String
+  cursoId Int
+  aulas   Aula[]
+  curso   Curso  @relation(fields: [cursoId], references: [id])
+}
+
+model Aula {
+  id           Int            @id @default(autoincrement())
+  titulo       String
+  urlVideo     String
+  moduloId     Int
+  modulo       Modulo         @relation(fields: [moduloId], references: [id])
+  documentos   Documento[]
+  formularios  Formulario[]
+  Questionario Questionario[]
+  redacoes     Redacao[]
+}
+
+model Documento {
+  id            Int      @id @default(autoincrement())
+  titulo        String
+  urlDocumento  String
+  tipoDocumento String
+  aulaId        Int
+  criadoEm      DateTime @default(now())
+  atualizadoEm  DateTime @updatedAt
+  aula          Aula     @relation(fields: [aulaId], references: [id])
+}
+
+model Formulario {
+  id       Int    @id @default(autoincrement())
+  titulo   String
+  conteudo String
+  aulaId   Int
+  aula     Aula   @relation(fields: [aulaId], references: [id])
+}
+
+model NotaBimestre {
+  id       Int   @id @default(autoincrement())
+  alunoId  Int
+  cursoId  Int
+  nota     Float
+  bimestre Int
+  aluno    Aluno @relation(fields: [alunoId], references: [id])
+  curso    Curso @relation(fields: [cursoId], references: [id])
+}
+
+model MediaNota {
+  id      Int   @id @default(autoincrement())
+  alunoId Int
+  cursoId Int
+  media   Float
+  aluno   Aluno @relation(fields: [alunoId], references: [id])
+  curso   Curso @relation(fields: [cursoId], references: [id])
+}
+
+model Chat {
+  id          Int         @id @default(autoincrement())
+  cursoId     Int
+  curso       Curso       @relation(fields: [cursoId], references: [id])
+  alunos      Aluno[]     @relation("AlunoChats")
+  professores Professor[] @relation("ProfessorChats")
+}
+
+model Progress {
+  id               Int      @id @default(autoincrement())
+  alunoId          Int
+  cursoId          Int
+  courseProgress   Int
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  completedLessons Json?    @default("[]")
+  aluno            Aluno    @relation(fields: [alunoId], references: [id])
+  curso            Curso    @relation(fields: [cursoId], references: [id])
+
+  @@unique([cursoId, alunoId], name: "cursoId_alunoId")
+}
+
+model Redacao {
+  id           Int               @id @default(autoincrement())
+  tema         String
+  id_curso     Int
+  id_professor Int
+  id_aula      Int
+  descricao    String?
+  aula         Aula              @relation(fields: [id_aula], references: [id])
+  curso        Curso             @relation(fields: [id_curso], references: [id])
+  professor    Professor         @relation(fields: [id_professor], references: [id])
+  correcao     RedacaoCorrecao?
+  respostas    RedacaoResposta[]
+}
+
+model RedacaoResposta {
+  id             Int                 @id @default(autoincrement())
+  id_redacao     Int
+  text           String
+  id_aluno       Int
+  illumination   String?
+  implementation String?
+  incubation     String?
+  preparation    String?
+  comentarios    ComentarioRedacao[]
+  correcao       RedacaoCorrecao?
+  aluno          Aluno               @relation(fields: [id_aluno], references: [id])
+  redacao        Redacao             @relation(fields: [id_redacao], references: [id])
+}
+
+model TipoComentario {
+  id           Int                 @id @default(autoincrement())
+  nome         String
+  cor          String
+  id_professor Int
+  comentarios  ComentarioRedacao[]
+  professor    Professor           @relation(fields: [id_professor], references: [id])
+
+  @@unique([nome, id_professor])
+}
+
+model ComentarioRedacao {
+  id                 Int             @id @default(autoincrement())
+  id_resposta        Int
+  id_tipo_comentario Int
+  texto_comentario   String
+  posicao_inicio     Int
+  posicao_fim        Int
+  created_at         DateTime        @default(now())
+  resposta           RedacaoResposta @relation(fields: [id_resposta], references: [id])
+  tipo_comentario    TipoComentario  @relation(fields: [id_tipo_comentario], references: [id])
+
+  @@index([id_resposta])
+  @@index([id_tipo_comentario])
+}
+
+model RedacaoCorrecao {
+  id                  Int             @id @default(autoincrement())
+  id_redacao          Int             @unique
+  id_redacao_resposta Int             @unique
+  descricao           String
+  id_professor        Int
+  professor           Professor       @relation(fields: [id_professor], references: [id])
+  redacao             Redacao         @relation(fields: [id_redacao], references: [id])
+  resposta            RedacaoResposta @relation(fields: [id_redacao_resposta], references: [id])
+}
+
+model Pergunta {
+  id                   Int                    @id @default(autoincrement())
+  texto                String
+  questionarioId       Int
+  alternativas         String?
+  tipo                 PerguntaTipo           @default(MULTIPLE_CHOICE)
+  Questionario         Questionario           @relation(fields: [questionarioId], references: [id])
+  RespostaCorreta      RespostaCorreta[]
+  RespostaQuestionario RespostaQuestionario[]
+}
+
+model PontuacaoQuestionario {
+  id             Int          @id @default(autoincrement())
+  alunoId        Int
+  questionarioId Int
+  pontuacao      Int
+  Aluno          Aluno        @relation(fields: [alunoId], references: [id])
+  Questionario   Questionario @relation(fields: [questionarioId], references: [id])
+}
+
+model Questionario {
+  id                    Int                     @id @default(autoincrement())
+  titulo                String
+  aulaId                Int
+  Pergunta              Pergunta[]
+  PontuacaoQuestionario PontuacaoQuestionario[]
+  Aula                  Aula                    @relation(fields: [aulaId], references: [id])
+}
+
+model RespostaCorreta {
+  id         Int      @id @default(autoincrement())
+  texto      String
+  perguntaId Int
+  Pergunta   Pergunta @relation(fields: [perguntaId], references: [id])
+}
+
+model RespostaQuestionario {
+  id         Int      @id @default(autoincrement())
+  alunoId    Int
+  perguntaId Int
+  resposta   String
+  Aluno      Aluno    @relation(fields: [alunoId], references: [id])
+  Pergunta   Pergunta @relation(fields: [perguntaId], references: [id])
+}
+
+enum PerguntaTipo {
+  MULTIPLE_CHOICE
+  OPEN_TEXT
+}

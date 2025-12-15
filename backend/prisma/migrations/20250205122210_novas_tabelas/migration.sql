@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE "Pergunta" ALTER COLUMN "tipo" SET DEFAULT 'MULTIPLE_CHOICE';
